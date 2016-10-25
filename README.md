@@ -10,6 +10,6 @@ This is the code used to analyze the data in Peru. For data de-idenfication purp
 2. simulaion_code.R
 
 Results in paper done running 3 chains with different starting values for beta and Rb.
-Ran in parallel using 20 different seeds (seeds 1:20)
+Ran in parallel using 20 different seeds (seeds 1:20). To run the entire file takes about a month on our computing cluster.
 
 
