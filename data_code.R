@@ -12,6 +12,7 @@ set.seed(4837)
 #vary Rbstart between 1.05 and 1.4
 Rbstart=3.66404233113
 
+
 #vary betastart between 0 and 1
 betastart=0.3
 
