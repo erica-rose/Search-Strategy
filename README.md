@@ -3,7 +3,9 @@ code for manuscript on seach strategy for vectors
 
 Two sets of code, one for simulations to verify methodology and one for data analysis
 
-1. data analysis
+1. data_code.R
+
+This is the code used to analyze the data in Peru. For data de-idenfication purposes, data import and cleaning has been removed from the code. 
 
 2. Simulations
 
