@@ -1,10 +1,3 @@
-#set working drive
-setwd("/home/ebillig/Jewell_data")
-#setwd("/Users/EMWB/Jewell/Data")
-#setwd("~/Desktop/Levy Lab")
-#setwd("~/Users/e/Jewell/Data")
-#setwd("/Users/mzlevy/Jewell/Data")
-
 #set seed
 set.seed(4837)
 
@@ -53,9 +46,10 @@ toc <- function()
 tic()
 
 #read in data
-arm = read.csv("tiabaya_juan4_waddlhouses.csv")
-arm = arm[,c("UNICODE", "LATITUDE", "LONGITUDE", "add.house")]
-add.house <- arm$add.house
+#arm = read.csv()
+
+#identify houses that are included in study region vs. those neighboring study region (add.house = 0 vs. add.house = 1)
+#add.house <- arm$add.house
 
 
 getUTM<-function(id, x,y){
@@ -68,57 +62,18 @@ getUTM<-function(id, x,y){
   return(utm.coord)
 }
 
-tiabaya.test <- getUTM(x=arm$LATITUDE,y=arm$LONGITUDE)
-
-#link unicodes with coordinates
-tiabaya.gps <- cbind(arm$UNICODE,tiabaya.test)
-tiabaya.gps <- rename(tiabaya.gps,c("arm$UNICODE" = "UNICODE"))
 
 
 #read in data
-inspecciones <- read.csv("inspecciones.csv")
-inspecciones <- inspecciones[,c("UNICODE", "DIA", "MES", "ANIO", "PD_TCAP_TOT","IN_TCAP_TOT", "INSP_COMPLETA")]
-inspecciones$INSP_COMPLETA <- ifelse(is.na(inspecciones$INSP_COMPLETA), 0, inspecciones$INSP_COMPLETA)
+#mark which houses have been inspected (INSP_COMPLETA = 1 vs. 0)
+#inspecciones$INSP_COMPLETA <- ifelse(is.na(inspecciones$INSP_COMPLETA), 0, inspecciones$INSP_COMPLETA)
 
-#vig <- read.csv("byHouse_fullEID.csv")
-priors <- read.csv("Corentins_Predictions_Jun-24-2015_07-13-06.csv")
-priors <- priors[,c("UNICODE","predicteddensity")]
-rociado <- read.csv("rociado.csv")
-uniblock <- read.csv("Tiabaya_uniblock.csv")
-uniblock <- uniblock[,c("unicode", "uniblock")]
-uchumayo <- read.csv("ENCUESTAS_VIG_TIABAYA_UCHUMAYO.csv")
-sanpedro3 <- read.csv("sanpedro3.csv")
 
 #set up uniblock data
-uniblock <- uniblock[,c("unicode", "uniblock")]
-names(uniblock)[names(uniblock)=="unicode"] <- "UNICODE"
-
-#format uchumayo data
-uchumayo <- uchumayo[,c("UNICODE", "DIA","MES","ANIO","T","T.1")]
-names(uchumayo)[names(uchumayo)=="T"] <- "IN_TCAP_TOT"
-names(uchumayo)[names(uchumayo)=="T.1"] <- "PD_TCAP_TOT"
-uchumayo$IN_TCAP_TOT <- ifelse(is.na(uchumayo$IN_TCAP_TOT), 0, uchumayo$IN_TCAP_TOT)
-uchumayo$PD_TCAP_TOT <- ifelse(is.na(uchumayo$PD_TCAP_TOT), 0, uchumayo$PD_TCAP_TOT)
-uchumayo <- uchumayo[which(uchumayo$IN_TCAP_TOT+uchumayo$PD_TCAP_TOT==0),]
-uchumayo$ANIO <- uchumayo$ANIO+2000
+#spatial kernel includes city block identifiers, so create block identifier variable
+#uniblock <- uniblock[,c("houseid", "uniblock")]
 
 
-#merge data
-insp.uchu <- merge(inspecciones, uchumayo, by=c("UNICODE", "DIA","MES","ANIO","IN_TCAP_TOT","PD_TCAP_TOT"),all=TRUE)
-insp.gps <- merge(insp.uchu,tiabaya.gps,by="UNICODE",all.y=TRUE)
-data <- merge(insp.gps, priors, by="UNICODE",all.x=TRUE)
-dataset <- merge(data, uniblock, by="UNICODE",all.x=TRUE)
-#data <- merge(data, uchumayo, by=c("UNICODE", "DIA","MES","ANIO","IN_TCAP_TOT","PD_TCAP_TOT"),all=TRUE)
-
-#drop all columns in rociado except unicode date of treatment and treatment ind
-rociado2 <- rociado[,c("UNICODE","DIA","MES","ANIO","T")]
-#rename rociado
-rociado2 <- data.frame(rociado2[1:1502,])
-colnames(rociado2) <-c("UNICODE", "DIA.T", "MES.T", "ANIO.T", "T")
-
-#Replace NA values with zeros for sum
-dataset$PD_TCAP_TOT <- ifelse(is.na(dataset$PD_TCAP_TOT),0,dataset$PD_TCAP_TOT)
-dataset$IN_TCAP_TOT <- ifelse(is.na(dataset$IN_TCAP_TOT),0,dataset$IN_TCAP_TOT)
 
 ##################################################
 #######define parameters##############################
@@ -136,74 +91,9 @@ date <- function(m,d,y){
   
   return(new.dates)
 }
-#outputs dates in the correct format that R uses
-dataset$date <- date(dataset$MES,dataset$DIA,dataset$ANIO)
 
-#treatment dataset
-rociado2$date.T <- date(rociado2$MES.T,rociado2$DIA.T,rociado2$ANIO.T)
-
-
-############################################################
-############# UPDATED CHANGES AND NEW FOR LOOP #############
-############################################################
-#if more than one observation for a house, pick most recent
-
-#identify unique unicodes
-unicode<-as.character(dataset$UNICODE)
-unicode.T <- as.character(rociado2$UNICODE)
-unique.unicodes <- unique(unicode)
-unique.unicodes.T <- unique(unicode.T)
-dates <- dataset$date
-dates.T <- rociado2$date.T
-
-#find repeated unicodes
-repeated.unicodes <- unicode[which(duplicated(unicode) == TRUE)]
-repeated.unicodes.T <- unicode.T[which(duplicated(unicode.T) == TRUE)]
-#setting an empty vector for the for loop
-unique.dates <- c(1:length(unique.unicodes)*NA)
-unique.dates.T <- c(1:length(unique.unicodes.T)*NA)
-
-#for houses with more than on observation, only take into account the one with latest date
-
-for (i in 1:length(unique.unicodes)){
-  
-  u <- which(unicode==unique.unicodes[i])
-  fecha <- dataset$date[u]
-  
-  if(is.na(fecha[1]) ==FALSE) {
-    maxf <- max(fecha, na.rm = TRUE)
-    v <- which(dataset$date == maxf)
-    unique.dates[i] <- intersect(u,v)
-  }
-  else {
-    unique.dates[i] <- max(u)
-  }
-}
-
-
-for (i in 1:length(unique.unicodes.T)){
-  
-  u <- which(unicode.T==unique.unicodes.T[i])
-  fecha <- rociado2$date.T[u]
-  
-  if(is.na(fecha[1]) ==FALSE) {
-    maxf <- max(fecha, na.rm = TRUE)
-    v <- which(rociado2$date.T == maxf)
-    unique.dates.T[i] <- intersect(u,v)
-  }else{
-    unique.dates.T[i] <- max(u)
-  }
-}
-
-
-#new dataframe with single unicodes 
-unique.data <-dataset[unique.dates,]
-unique.data.T <- rociado2[unique.dates.T,]
-
-#merge inspected and treated datasets
-test <- merge(unique.data,unique.data.T,by="UNICODE",all.x=TRUE)
-dataset <- test
-
+#time unit defined as 90 day interval
+#sum.insp is variable with observed bug counts
 
 earliest <- sort(dataset$date)[1]
 latest <- sort(dataset$date)[length(dataset$date[which(!is.na(dataset$date))])]
@@ -228,9 +118,6 @@ inspected <- ifelse(dataset$INSP_COMPLETA==1,1,0)
 #replace NAs with max time
 tobs = ifelse(is.na(tobs), maxt,tobs)
 
-#sum inspecciones in districts 4,5,6
-sum.insp <- dataset$PD_TCAP_TOT + dataset$IN_TCAP_TOT
-
 
 #Replace NA values for prior probability with median value
 #find median value of those that are not NA
@@ -239,8 +126,8 @@ median.pred.prob <- median(dataset$predicteddensity[which(!is.na(dataset$predict
 #replace NAs with this value
 predprobs <- ifelse(is.na(dataset$predicteddensity), median.pred.prob, dataset$predicteddensity)
 
-#get unicodes as strings
-unicode<-as.character(dataset$UNICODE)
+#get houseids as strings
+houseid<-as.character(dataset$houseid)
 
 
 ########################################################
@@ -298,7 +185,7 @@ trueremovaltimetest <- trueremovaltimetest - Iinitial+1
 
 #option1: define threshold as block
 noblock <- which(is.na(dataset$uniblock))
-dataset$UNICODE[noblock]
+dataset$houseid[noblock]
 dataset$uniblock[noblock[1]]<-"1.24.3.22"
 dataset$uniblock[noblock[2]]<-"1.24.3.25"
 dataset$uniblock[noblock[3]]<-"1.24.3.25"
@@ -832,7 +719,7 @@ for (m in 2:M){
   occult[N_I[!(N_I %in% N_N)]]=occult[N_I[!(N_I %in% N_N)]]+1
   #occult.sum <- apply(occult,1,sum)
   occult.prob<- occult/m
-  occult.prob.ids <- data.frame(id, occult.prob, dataset$X, dataset$Y, unicode)
+  occult.prob.ids <- data.frame(id, occult.prob, dataset$X, dataset$Y, houseid)
   occult.prob.ids.ordered <- occult.prob.ids[order(occult.prob, decreasing = TRUE),]
   if(m%%100000==0) {
   	print(m)
