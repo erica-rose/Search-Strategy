@@ -1,5 +1,5 @@
 # Search-Strategy
-code for manuscript on seach strategy for vectors
+code for manuscript on search strategy for vectors
 
 Two sets of code, one for simulations to verify methodology and one for data analysis
 
