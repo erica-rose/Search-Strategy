@@ -1,6 +1,4 @@
-setwd("/home/ebillig/Jewell_data/Simulationsforpaper")
-#setwd("H:/Jewell_data/Simulationsforpaper")
-#setwd("~/Jewell/Data")
+setwd("~/Search_Strategy")
 #set seed
 seednumber=1
 set.seed(seednumber)
@@ -45,8 +43,7 @@ runsimulation <- function(truebeta,trueRb){
     
     
     #locations uniform on [0,1]x[0,1] grid
-    arm <- read.csv("Tiabaya_uniblock.csv")
-    data <- arm[which(arm$X>222000&arm$X<222500&arm$Y>8180300&arm$Y<8180500),c("X", "Y", "uniblock")]
+    data <- read.csv("sim_map.csv")
     data$uniblock <- as.numeric(data$uniblock)
     blocks <- data$uniblock
 
@@ -120,11 +117,8 @@ runsimulation <- function(truebeta,trueRb){
     
     #probability that i infects j
     h1<-function(t,r,I,i,j,beta){
-      #n=bugs[i,t]
       n=1
-      #N.prime=ifelse(t-I[i]>0,Rb^(t-I[i]),0)
       deriv <- r^(t-I[i])*log(r)-(K-1)*K*r^(t-I[i])*log(r)/(K+r^(t-I[i])-1)^2
-      #deriv=K*n^2*log(r)/((K-n)*exp(-log(r)*(t-I[i]))+n)^2
       hazard=ifelse(deriv>0,1-(1-beta/N*threshold[i,j])^(deriv),0)
       return(hazard) 
     }
@@ -606,7 +600,7 @@ for (m in 2:M){
   logfirstpiecestar=ifelse(logfirstpiecestar=="-Inf",0,logfirstpiecestar)
   loglikestar=sum(logfirstpiecestar)-secondpiece.wrap(I, trueremovaltime, betastar, Rb[m], K, N, maxt, threshold,thresholdsum)
   betapriors <- dbeta(betastar,shape1=truebeta*10,shape2=10-truebeta*10,log=TRUE)-dbeta(beta[m-1],shape1=truebeta*10,shape2=10-truebeta*10,log=TRUE)
-  mstep.beta=min(1,exp(loglikestar-loglike+betapriors))   #-dbeta(betastar, a.beta, b.beta, log=TRUE)+dbeta(beta[m-1], a.beta, b.beta,log=TRUE)
+  mstep.beta=min(1,exp(loglikestar-loglike+betapriors))
   if(mstep.beta=="NaN") mstep.beta=1
   R=runif(1)
   if(R<mstep.beta){
@@ -750,7 +744,6 @@ for (m in 2:M){
       lambda.bugsstar <- beverton.holt.update(K,Rb[m],bugsstar,trueremovaltime[update],I[update])[(I[update]):maxt]
       bugsstar <- bugs[update,(I[update]:maxt)]
       bugprior <- prod(dgamma(bugsstar, lambda.bugsstar, 1))
-     # probifdeleted <- occult[update]/m
       probifnotdeleted <- (occult[update]+1)/m
       extra.piece <- (length(N_I)-length(N_N))/(length(which(I==Inf))+1)/dbeta(probifnotdeleted, alpha.p, beta.p)/dunif(update,min=1,max=length(which(I==Inf)))  
       #decide whether to accept new I
@@ -806,7 +799,7 @@ return(list(occult.prob.ids.unsorted, beta, Rb, accept.I, accept.beta,accept.Rb,
 #NOTE: this simulation assumes Markov properties
 #we can later extend to non-Markov chains
 #simulation statistic vectors initialized
-S.sim=30 #number of simulations
+S.sim=5 #number of simulations
 p=1:10/1000
 N=173
 true.occult <- total <- neg <- rep(NA,S.sim)
@@ -824,7 +817,7 @@ tic()
 for (s in 1:S.sim){
   truebeta=0.3
   trueRb=2.1
-  burnin=1000
+  burnin=1
   
   sim <- runsimulation(truebeta,trueRb)
   data <- sim[[1]]
@@ -835,15 +828,10 @@ for (s in 1:S.sim){
   blocks <- sim[[6]]
   distance <- sim[[7]]
   
-  #FIND MLE
-  #MLEresult <- optim(par=c(.1,1.15),mleest, data=data,threshold=threshold,method="Nelder-Mead") 
-  #MLEbeta[s] <- MLEresult$par[1]
-  #MLERb[s] <- MLEresult$par[2]
-  
   assign(paste("sim",s,sep=""),
          foreach(betastart=c(0.3,0.05,0.1), 
                  Rbstart=c(2.2, 2.7, 2.3), 
-                 totaliterations=rep(500000,3)) %do% {runMCMC(betastart, Rbstart, totaliterations,data, occults, bugs, predprobs, truebeta, trueRb, threshold, N, blocks, distance)})
+                 totaliterations=rep(5000000,3)) %do% {runMCMC(betastart, Rbstart, totaliterations,data, occults, bugs, predprobs, truebeta, trueRb, threshold, N, blocks, distance)})
   
   occult.prob.ids1 <- eval(as.name(paste("sim",s,sep="")))[[1]][[1]]
   occult.prob.ids2 <- eval(as.name(paste("sim",s,sep="")))[[2]][[1]]
@@ -893,31 +881,8 @@ for (s in 1:S.sim){
   npv[s,] <- true.neg[s,]/(total[s]-(total.prob[s,]-true.pos[s,]))
   sens[s,] <- true.pos[s,]/true.occult[s]
   ppv[s,] <- true.pos[s,]/total.prob[s,]
-  spec[s,] <- true.neg[s,]/neg[s]
-  save.image(paste("/home/ebillig/Jewell_data/Simulationsforpaper/",seednumber,"Simulation4Results.Rdata", sep=""))}
+  spec[s,] <- true.neg[s,]/neg[s]}
 
 }
 
 toc()
-specforplot <- apply(spec, 2, mean)
-sensforplot <- apply(sens,2,mean)
-
-plot(c(0,.5),c(0,.5),type="l")
-lines(1-specforplot,sensforplot,type="l")
-# 
-# 
-
-library(ROCR)
-pred<-NULL
-#plot ROC curves
-for(i in 1:S.sim){
-  pred1 <- prediction(occult.prob[,1], occultsforroc[,1])
-  pred2 <- prediction(occult.prob[,2], occultsforroc[,2])
-}
-
-perf <- performance(pred1,"tpr","fpr")
-plot(perf,colorize=TRUE)
-
-perf <- performance(pred2,"tpr","fpr")
-plot(perf,colorize=TRUE,add=TRUE)
-
