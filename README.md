@@ -1,15 +1,13 @@
 # Search-Strategy
 code for manuscript on search strategy for vectors
 
-Two sets of code, one for simulations to verify methodology and one for data analysis
 
-1. data_code.R
+1. sim_map.csv 
 
-This is the code used to analyze the data in Peru. For data de-idenfication purposes, data import and cleaning has been removed from the code. 
+.csv file is the de-identified map of an area of Arequipa, Peru. Dataset includes standardized X and Y coordinates as well as city block indicators
 
 2. simulation_code.R
 
-Results in paper done running 3 chains with different starting values for beta and Rb.
-Ran in parallel using 20 different seeds (seeds 1:20). To run the entire file takes about a month on our computing cluster.
+Code to run simulations of algorithm on de-identified map included above. Due to standardization of map for de-identification purposes, parameter values used in paper will not reflect same results as sim_map.csv. Alternative parameter values must be used to generate reasonable simulated datasets. 
 
 
