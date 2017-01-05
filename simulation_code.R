@@ -772,20 +772,7 @@ for (m in 2:M){
   occult.prob.ids.unsorted <- cbind(id, occult.prob)
   occult.prob.ids <- occult.prob.ids.unsorted[order(occult.prob, decreasing = TRUE),]
   occult.prob.ids <- cbind(occult.prob.ids, rank)
-#   
-#    if(m%%100==0) {print(m)
-#                  print(beta[m])
-#                  print(Rb[m])
-#                  print(N_I)}
-# 
-#   if(m%%100==0) {colfunc = gray.colors(length(unique(occult.prob.ids[,2])),start=1,end=0)[as.factor(occult.prob.ids[,2])]
-#     par(mfrow=c(1,1))
-#    par(mar=c(1, 1, 1, 1), xpd=TRUE)
-#    plot(occult.prob.ids[,3], occult.prob.ids[,4],col = colfunc,pch=16,cex=occult.prob.ids[,2]*500)
-#    points(location[occults,1], location[occults,2],col = "skyblue")
-#    points(location[occult.prob.ids[1:10],1], location[occult.prob.ids[1:10],2],col = "gold",pch=18) 
-#    for (i in 1:N) if(sum.insp[i]>0) points(location[i,1],location[i,2],pch=18,col="firebrick4",cex=1)
-#   }
+
 }
 
 return(list(occult.prob.ids.unsorted, beta, Rb, accept.I, accept.beta,accept.Rb,occults,N_N))
@@ -796,9 +783,6 @@ return(list(occult.prob.ids.unsorted, beta, Rb, accept.I, accept.beta,accept.Rb,
 
 ##################################################
 ####################################
-#NOTE: this simulation assumes Markov properties
-#we can later extend to non-Markov chains
-#simulation statistic vectors initialized
 S.sim=5 #number of simulations
 p=1:10/1000
 N=173
